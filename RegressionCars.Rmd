@@ -1,0 +1,107 @@
+---
+title: "RegressionCars"
+author: "Lindsey Erickson"
+date: "May 22, 2017"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+#Introduction
+This assignment takes the cars dataset located in the datasets library and explores the relationship between a set of variables and miles per gallon (MPG).  We're particularly interested in the MPG differences between automatic transmission or manual transmissions, and which transmission type is better for MPG.
+
+#Limitations
+This analysis is for an assignment that asks to do some quick regression building to solve the above questions.  Given more time, a deeper analysis and better model building techniques.
+
+#Executive Summary
+I did some exploratory analysis and model building to understand the miles per gallon (MPG) on different cars.  Looking at the data anaylsis, it was clear that cars with a manual transmission had a higher MPG than cars with an automatic transmission.  I ran a t-test to see if there was any significance in the previous comment, which there was.  Therefore, I knew that manual tranmission cars had a higher MPG than automatic transmission. Because of this, I knew I needed to include transmission type when building a regression model to determine what kind of car has the highest MPG.
+
+I started the regression model building by first running a correlation plot to see what variables to include in the regression model.  I knew from the above comments that I wanted to include transmission type; however, I needed the correlation plot to see what else to include.  Out of curiosity, I ran a model that included every available variable.  This model was not ideal; however, it produced an R-sqaure of about 0.87, the residual vs fitted plot looked random, and the QQ-plot shows that the residuals are fairly normal.  This model appears to be really good; however, I suspect it would be an overfitted model.  However, running a model with the top seven correlated variables produced the most random (no patterns) residual vs fitted plot and normal QQ-plot.  
+
+#Final Model
+The final model used was mpg = factor(cyl) + disp + drat + factor(am) + wt + factor(vs) + hp, which produced an R-sqaured of >0.87 and decent residual plots.
+
+#Exploratory Analysis
+To do this, I"ll first do some exploratory analysis to make some sense of the data.  These are the steps I'll take:
+
+    1. look at the first six observations and the last six observations
+    2. look at the structure of the data
+    3. look some summary statistics
+    4. check for missing data
+    5. run correlation plots (see appendix)
+    
+```{r, echo=TRUE, collapse=TRUE, warning=FALSE}
+library(datasets)
+library(ggplot2)
+library("PerformanceAnalytics")
+
+dataCars <- mtcars
+head(dataCars, n = 2) #first two observations
+tail(dataCars, n = 2) #last two observations
+summary(dataCars) #summary of the data
+str(dataCars) #structure of the data
+
+#checking for missing data
+table(is.na(dataCars))
+
+#checking data point that looks like an outlier
+dataCars[ which(dataCars$hp == 335.0), ]
+
+```
+</br>
+Here's what we know for running the above analysis:
+  
+  1. There are 32 observations and 11 variables
+  2. All variables are numeric
+  3. None of the variables seem to have any outliers; however, there is a value of 335 in hp.  This seemed like an outlier to me; however, when checking the value, I noticed that it was associated with a Maserati so I will leave it as is.
+  4. There is no missing values in any of the variables
+</br>
+
+Since we are interested in the MPG between the two different transmission types, let's take a look at a box plot to see the variation of MPG between automatic transmission and manual transmission.
+
+```{r, echo=TRUE, collapse=TRUE}
+cor(dataCars$am, dataCars$mpg) #correlation between transmission and MPG
+t.test(dataCars$mpg~dataCars$am) #ttest for statistical significance between transmission types and MPG
+pValue <- round(t.test(dataCars$mpg~dataCars$am)$p.value, 3)
+
+ggplot(dataCars, aes(x=as.factor(am), y=mpg)) +
+  geom_boxplot(fill="hot pink") +
+  xlab("Transmission Type") +
+  ylab("MPG") +
+  ggtitle("Boxplot of mean miles per gallon (MPG) by transmission type") +
+  scale_x_discrete(labels=c("Automatic","Manual"))
+```
+</br>
+First, we see that the correlation between MPG and transmission type is 0.60.  Not bad.  Looking at the boxplot, visually, it seems that manual transmission provides a higher MPG than automatic transmission.  The t-test shows that there is a statistical difference in the MPG between automatic transmissions and manual transmissions (p-value: `r pValue`)
+</br>
+
+#Fit our Regression Model
+Now, we will fit the models.  The first model uses all variables, the second model uses the top three correlated variables.  The last model uses top seven correlated variables.
+```{r, echo=TRUE, collapse=TRUE}
+model1 <- lm(mpg ~ ., data=dataCars)
+summary(model1)$r.squared
+
+model2 <- lm(mpg ~ factor(cyl) + disp + wt, data=dataCars)
+summary(model2)$r.squared
+
+model3 <- lm(mpg ~ factor(cyl) + disp + drat + factor(am) + wt + factor(vs) + hp, data=dataCars)
+summary(model3)
+
+```
+</br>
+
+#Appedix
+
+correlation matrix on the dataset
+```{r, echo=TRUE, collapse=TRUE, warning=FALSE}
+#my_data <- dataCars[, c(1,3,4,5,6,7, 8, 9, 10, 11)]
+chart.Correlation(dataCars, histogram=TRUE, pch=19)
+```
+</br>
+
+diagnostic plots for model3: residual vs fitted plot and QQ-Plot to see whether the residuals are normal
+```{r, echo=TRUE, collapse=TRUE, warning=FALSE}
+plot(model3, which = 1)  #see residuals vs fitted
+plot(model3, which = 2) #see whether the residuals are normal
+```
